@@ -1,0 +1,6 @@
+name: 'My Module'
+type: module
+description: 'TODO: Description of module'
+dependencies:
+  - node
+core: 8.x

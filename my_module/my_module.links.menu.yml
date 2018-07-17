@@ -1,0 +1,3 @@
+my_module.mymodulecreatenode:
+  title: 'My Module Create Node'
+  route_name: my_module.mymodulecreatenode

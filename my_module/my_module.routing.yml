@@ -1,0 +1,7 @@
+my_module.mymodulecreatenode:
+  path: /mymodulecreatenode
+  defaults:
+    _title: 'My Module Create Node'
+    _controller: '\Drupal\my_module\Controller\MymodulecreatenodeController::content'
+  requirements:
+    _permission: 'TODO: set permission machine name'

@@ -1,0 +1,108 @@
+<?php
+
+use Drupal\my_module\Controller\MymodulecreatenodeController;
+use Drupal\taxonomy\Entity\Term;
+use Drupal\system\Entity\Menu;
+use Drupal\menu_link_content\Entity\MenuLinkContent;
+
+/**
+ * Adding a library (css+js) to all pages
+ */
+function my_module_page_attachments(array &$page) {
+  $page['#attached']['library'][] = 'my_module/james';
+}
+
+/**
+ *  Implements hook_ENTITY_TYPE_insert().
+ */
+function my_module_node_insert(Drupal\node\NodeInterface $node) {
+  $mp = $node->get('field_menu_placeholder')->getString();
+
+
+  ////////////////////////////////////////////////////////////
+  // Does the to-be-used section term exist?
+  // We use a section name of "username-feed_id", so we first
+  // need to gather the username of the user running the import
+  // and the feed_id of the feed being ran.
+  ////////////////////////////////////////////////////////////
+
+  // Get the user who is running the import
+  $user = \Drupal\user\Entity\User::load(\Drupal::currentUser()->id())->getUsername();
+
+  // Get the 'feeds_item' field value
+  $fi_value = $node->get('feeds_item')->getValue();
+  $feed_item_id = $fi_value[0]['target_id'];
+
+  // Create the temporary section name
+  $section = $user .'-'. $feed_item_id;
+
+
+  // Try to load the proper term
+  $new_term_vid = 'sections';
+  $query = \Drupal::entityQuery('taxonomy_term')
+    ->condition('vid', $new_term_vid)
+    ->condition('name', $section);
+  $tids = $query->execute();
+  //dpm($tids, '$tids');
+  $term = Term::loadMultiple($tids);
+
+  //dpm($term, '$term before the if/else');
+
+
+  if(empty($term)){
+    //dpm('The section DOES NOT EXIST already exist.  Create it here.');
+    //dpm($term, '$term in the DOES NOT EXIST clause');
+    $new_term = Term::create(['vid' => $new_term_vid, 'name' => $section]);
+    $new_term->save();
+    $node->set('field_section', $new_term->id());
+    //dpm($new_term->getName(), '$new_term');
+  }else{
+    //dpm('The section DOES EXIST, use it.');
+    //dpm($term, '$term in the DOES EXIST clause');
+    $existing_term_id = reset($term);
+    //dpm($existing_term_id, '$existing_term_id');
+    $existing_term = Term::load($existing_term_id->id());
+    $node->set('field_section', $existing_term_id);
+  }
+
+
+
+  ////////////////////////////////////////////////////////////
+  // Does the menu need to be created?
+  // Similar to the section above, we need to determine whether
+  // or not the menu already exists. The menu should be named
+  // the same as the section.
+  ////////////////////////////////////////////////////////////
+  dpm($section, 'using this $section to try loading the menu');
+  $menu = Menu::load($section);
+
+
+  dpm($menu, '$menu');
+
+  if(empty($menu)) {
+    dpm($menu, 'Inside the empty $menu block');
+    Menu::create([
+      'id' => $section,
+      'label' => $section,
+      'description' => 'Description for: ' . $section . ' menu',
+    ])->save();
+  }
+
+  // Add the 'realistic' dummy page content.
+  $node_body = MymodulecreatenodeController::getDummyPageContent();
+  $node->body = array('format' => 'full_html', 'value' => $node_body);
+  $node->save();
+
+  //Create a menu link
+  MenuLinkContent::create([
+    'title' => $node->getTitle(),
+    'link' => 'internal:/node/' . $node->id(),
+    'menu_name' => $section,
+  ])->save();
+
+
+  dpm('End of my_module_node_insert()');
+}
+
+
+
