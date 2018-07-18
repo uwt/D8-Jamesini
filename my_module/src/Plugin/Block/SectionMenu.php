@@ -39,47 +39,25 @@ class SectionMenu extends BlockBase {
 
     $node = \Drupal::routeMatch()->getParameter('node');
     $node->id();  // get current node id (current url node id)
-    dpm($node->id(), '$node->id()');
+    //dpm($node->id(), '$node->id()');
     $section_id = $node->get('field_section')->getString();
-    dpm($section_id, '$section_id');
+    //dpm($section_id, '$section_id');
 
+    // $term is the loaded term
     $term = Term::load($section_id);
+    // $menu_name is the string value of the term, which exactly
+    // matches the menu name.  No coincidence.
     $menu_name = $term->label();
-    //$menu_name = 'root-4';
 
+    $mp = \Drupal::menuTree()->getCurrentRouteMenuTreeParameters($menu_name);
+    $test = \Drupal::menuTree()->load($menu_name, $mp);
+    $render = \Drupal::menuTree()->build($test);
 
+    return $render;
 
-
-    $menu_tree = \Drupal::menuTree();
-    $parameters = $menu_tree->getCurrentRouteMenuTreeParameters($menu_name);
-    $parameters->setMinDepth(0);
-
-    //Delete comments to have only enabled links
-    //$parameters->onlyEnabledLinks();
-
-
-    $tree = $menu_tree->load($menu_name, $parameters);
-    $manipulators = array(
-      array('callable' => 'menu.default_tree_manipulators:checkAccess'),
-      array('callable' => 'menu.default_tree_manipulators:generateIndexAndSort'),
-    );
-    $tree = $menu_tree->transform($tree, $manipulators);
-    $list = [];
-
-    foreach ($tree as $item) {
-      $title = $item->link->getTitle();
-      $url = $item->link->getUrlObject();
-      $list[] = Link::fromTextAndUrl($title, $url);
-    }
-
-    $output['sections'] = array(
-      '#theme' => 'item_list',
-      '#items' => $list,
-    );
-    return $output;
   }
 
-
+// @see https://drupal.stackexchange.com/a/199541
   public function getCacheTags() {
     //With this when your node change your block will rebuild
     if ($node = \Drupal::routeMatch()->getParameter('node')) {
@@ -91,6 +69,7 @@ class SectionMenu extends BlockBase {
     }
   }
 
+// @see https://drupal.stackexchange.com/a/199541  
   public function getCacheContexts() {
     //if you depends on \Drupal::routeMatch()
     //you must set context of this block with 'route' context tag.

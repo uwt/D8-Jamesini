@@ -73,14 +73,13 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
   // or not the menu already exists. The menu should be named
   // the same as the section.
   ////////////////////////////////////////////////////////////
-  dpm($section, 'using this $section to try loading the menu');
   $menu = Menu::load($section);
 
 
-  dpm($menu, '$menu');
+  //dpm($menu, '$menu');
 
   if(empty($menu)) {
-    dpm($menu, 'Inside the empty $menu block');
+    //dpm($menu, 'Inside the empty $menu block');
     Menu::create([
       'id' => $section,
       'label' => $section,
@@ -93,16 +92,127 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
   $node->body = array('format' => 'full_html', 'value' => $node_body);
   $node->save();
 
+
+  ////////////////////////////////////////////////////////////
+  // Make menus nested.  Have fun, yo.
+  // Ok, here's the logic that *should* work:
+  // 1) Get the existing menu hierarchy ($mh)
+  // 2) Get the current menu item placeholder
+  // 2.1) Get the number of segments in the current menu item placeholder
+  // 3) Get the number of segments in the previous menu item of the menu hierarchy
+  // 4) IF: the previous menu item has fewer segments than the current menu item placeholder,
+  //    then the previous menu item is the parent of the current parent.
+  //    ELSE: travel to the next menu item placeholder in the hierarchy and check again.
+  //    Keep doing this until a parent is set.   
+  ////////////////////////////////////////////////////////////
+
+  // Load an existing menu placeholder
+  //dpm($section, '$section before getting');
+  $tempstore = \Drupal::service('user.private_tempstore')->get('my_module');
+  
+  // $holder stores the hierarchy. At this point it does NOT contain the current node.
+  $holder = array();
+  $holder =  $tempstore->get($section);
+  
+  // $mip = Menu Item Placeholder. This is the 'hierarchy string' included with the node on import.
+  $mip = $node->get('field_menu_placeholder')->getString();
+  
+  // Add the current node to the hierarchy list
+  $holder[$mip] = $node->id();
+
+  // Update the temporary storage with the updated data
+  $tempstore->set($section, $holder);
+
+  // $mh = Menu Hierarchy. The temporary menu hierarchy storage, including the
+  // current node.
+  $mh = $tempstore->get($section);
+  // We want to reverse the array so we can travel through it with a normal foreach()
+  // @see fatty notes above about the logic.
+  
+  // $tmphi = TeMPorary HIerarchy
+  $tmphi = array_reverse($mh, TRUE);
+  
+  // I believe that NULL parents are fine to submit to the create method. We'll see.
+  $parent = NULL;
+  
+  //dpm($tmphi, $mip);
+  // Menu Item Placeholder Segments tells us how deep in the hierarchy a menu item is.
+  // We are trying to figure out what the parent menu item is and then set that menu item
+  // as the parent of this menu item.
+  $mip_segments = substr_count($mip, '_');
+  //dpm($mip_segments, '$mip_segments');
+  
+  foreach($tmphi as $placeholder => $nid){
+    //dpm($nid, '$nid');
+    //dpm($placeholder, '$placeholder');
+    $segments = substr_count($placeholder, '_');
+    //dpm($segments, '$segments');
+
+
+    if($segments < $mip_segments){
+      dpm("The menu item we are about to create should have a parent of $nid.");
+      // Ok, the logic *seems* sound.  (I wish I was smarter...ugh).
+      // We have our existing node available in $node
+      // We need to get the UUID of the soon-to-be parent menu item
+      // parent data is stored in table menu_link_content_data 
+      // and is stored in the format menu_link_content:65cfc9ac-509b-40b5-abfe-06de617bacf4
+      //dpm($mh[$placeholder], 'bobo');
+
+      $parent_nid = $mh[$placeholder];
+      //dpm($parent_nid, '$parent_nid');
+      
+      $menu_link_manager = \Drupal::service('plugin.manager.menu.link');
+      $results = $menu_link_manager->loadLinksByRoute('entity.node.canonical', array('node' => $parent_nid));
+
+      foreach($results as $result){
+        //dpm($result->getPluginId(), 'pluginid or uuid');
+        $link_id = $result->getPluginId();
+        $link_menu = $result->getmenuName();
+        dpm($bobo, '$bobo');
+        if($link_menu == $section){
+          $parent = $link_id;
+        }
+      } // /foreach over the loadLinksByRoute()
+
+      break;
+    }
+  }
+
+
+  dpm($parent, '$parent just prior to creatig the link');
   //Create a menu link
+  // @see https://drupal.stackexchange.com/a/257797
   MenuLinkContent::create([
     'title' => $node->getTitle(),
     'link' => 'internal:/node/' . $node->id(),
     'menu_name' => $section,
+    'parent' => $parent,
   ])->save();
 
 
   dpm('End of my_module_node_insert()');
 }
 
+/**
+ * Implements hook_form_alter()
+ */
+function my_module_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id){
+  //dpm($form_id, '$form_id');
+  if($form_id === 'feeds_feed_import_writemap_import_form'){
+    dpm("Yo, we are gonna delete that temp var now...");
+
+    $path = \Drupal::request()->getpathInfo();
+    $arg  = explode('/',$path);
+    //dpm($arg, '$arg');
+
+    // Get the user who is running the import
+    $user = \Drupal\user\Entity\User::load(\Drupal::currentUser()->id())->getUsername();
+    $section = $user . '-' . $arg[2];
+    //dpm($section, '$section');
+    $tempstore = \Drupal::service('user.private_tempstore')->get('my_module');
+    $tempstore->set($section, array());
+    //dpm($bobo, '$bobo at end of form_alter()');
+  }
+}
 
 
