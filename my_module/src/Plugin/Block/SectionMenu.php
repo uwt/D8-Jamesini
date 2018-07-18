@@ -34,27 +34,26 @@ class SectionMenu extends BlockBase {
     // the menu name.
     //////////////////////////////////////////////////
 
-
     // code to get nid
-
     $node = \Drupal::routeMatch()->getParameter('node');
-    $node->id();  // get current node id (current url node id)
-    //dpm($node->id(), '$node->id()');
-    $section_id = $node->get('field_section')->getString();
-    //dpm($section_id, '$section_id');
+    if(isset($node)){
+      $node->id();  // get current node id (current url node id)
+      // Get the section from the loaded node
+      $section_id = $node->get('field_section')->getString();
 
-    // $term is the loaded term
-    $term = Term::load($section_id);
-    // $menu_name is the string value of the term, which exactly
-    // matches the menu name.  No coincidence.
-    $menu_name = $term->label();
+      // Load the term so we can get the label
+      // $menu_name is the string value of the term, which exactly
+      // matches the menu name.  No coincidence.
+      $term = Term::load($section_id);
+      $menu_name = $term->label();
 
-    $mp = \Drupal::menuTree()->getCurrentRouteMenuTreeParameters($menu_name);
-    $test = \Drupal::menuTree()->load($menu_name, $mp);
-    $render = \Drupal::menuTree()->build($test);
+      // Load, build, render, and return the menu
+      $parameters = \Drupal::menuTree()->getCurrentRouteMenuTreeParameters($menu_name);
+      $menu = \Drupal::menuTree()->load($menu_name, $parameters);
+      $render = \Drupal::menuTree()->build($menu);
 
-    return $render;
-
+      return $render;
+    }
   }
 
 // @see https://drupal.stackexchange.com/a/199541
