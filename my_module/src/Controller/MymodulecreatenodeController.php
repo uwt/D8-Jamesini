@@ -18,86 +18,12 @@ class MymodulecreatenodeController {
    * Callback for the my_module.mymodulecreatenode route.
    */
   public function content() {
-
-
-    $data = [];
-    $data[] = ['section' => 'My Section', 'menuid' => 'my_menu', 'menulabel' => 'My Menu', 'title' => 'My Title','body' => 'My Body'];
-    $data[] = ['section' => 'My Other Section', 'menuid'=>'my_other_menu', 'menulabel' => 'My Other Menu', 'title' => 'My Other Title','body' => 'My Other Body'];
-
-    ///// 
-    // Get the current Sections
-    $vid = 'sections';
-    $terms = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($vid);
-
-    $allSections = [];
-
-    foreach($terms as $term){
-      $allSections[] = $term->name;
-    }
-
-
-    //dpm($allSections, '$allSections before foreach()');
-
-    /////
-    // Determine if this run should: 
-    // overwrite existing content - OR - create new content
-    // (content meaning section, menu, and nodes)
-
-    foreach($data as $d){
-      //dpm($d['section'], '$section');
-      $sec = $d['section'];
-      if(in_array($sec, $allSections)){
-        //dpm('Do NOT create section: ' . $sec);
-      }else{
-        //dpm('Create section: ' . $d['section']);
-
-        // Create terms
-        $term = Term::create([
-          'name' => $sec,
-          'vid' => 'sections',
-        ]);
-        $term->save();      
-
-      //dpm('about to create menu...');
-      $menu = Menu::load($d['menuid']);
-      //dpm($menu, '$menu');
-
-      // Create a menu
-      ///*
-      Menu::create([
-        'id' => $d['menuid'],
-        'label' => $d['menulabel'],
-        'description' => 'Description for: ' . $d['menulabel'],
-      ])->save();
-      //*/
-
-
-        $allSections[] = $sec;
-      }
-    }
-    //dpm($allSections, '$allSections after foreach()');
-
-    // If needed, delete the existing section, menu, and nodes
-    
-    // Create the section, menu, and nodes
-    
-      
-
-
-
-    // Delete existing nodes and menus
-    MymodulecreatenodeController::deleteStuff($data);
-
-    // Make the nodes
-    MymodulecreatenodeController::makeNode($data);
-
     // Output a bit of regular content
     $build = [
       '#markup' => t('Hey there Bobo!'),
     ];
-
     return $build;
-  }
+}
 
   
 
