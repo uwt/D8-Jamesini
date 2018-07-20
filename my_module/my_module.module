@@ -14,12 +14,18 @@ function my_module_page_attachments(array &$page) {
 
 /**
  *  Implements hook_ENTITY_TYPE_insert().
+ *  When nodes are being created via the Writemap CSV export, we want to
+ *  1) Assign a section
+ *  2) Assign a menu item in the proper hierarchy.
  */
 function my_module_node_insert(Drupal\node\NodeInterface $node) {
   // Get the menu placeholder which comes from writemaps.com
   // in the form of page_001_001_001
-  $mp = $node->get('field_menu_placeholder')->getString();
 
+  $mp = $node->get('field_menu_placeholder')->getString();
+  // If the node being created doesn't have a menu placeholder, don't ron this code. 
+  if(strlen($mp) == 0){
+  }else{
 
   ////////////////////////////////////////////////////////////
   // The section and menu machine names are of the format "username-feed_id"
@@ -130,6 +136,7 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
   // Sending NULL 'parent'  to the menu link creating method works fine.
   $parent = NULL;
 
+  //dpm($term, '$term');
   // Menu Item Placeholder Segments tells us how deep in the hierarchy a menu item is.
   // We are trying to figure out what the parent menu item is and then set that menu item
   // as the parent of this menu item.
@@ -170,6 +177,7 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
     'parent' => $parent,
     'expanded' => TRUE,
   ])->save();
+}// end of 'was this node created by the import script?'
 }
 
 /**
@@ -178,7 +186,8 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
  * we want to delete the existing temporary variable
  */
 function my_module_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id){
-  if($form_id === 'feeds_feed_import_writemap_import_form'){
+  switch($form_id){
+  case 'feeds_feed_import_writemap_import_form':
 
     $path = \Drupal::request()->getpathInfo();
     $arg  = explode('/',$path);
@@ -188,5 +197,55 @@ function my_module_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form
     $section = $user . '-' . $arg[2];
     $tempstore = \Drupal::service('user.private_tempstore')->get('my_module');
     $tempstore->set($section, array());
+    break;
+
+  case 'feeds_feed_import_writemap_clear_form':
+    // Add the section variable so it gets passed to our custom submit handler.
+    $path = \Drupal::request()->getpathInfo();
+    $arg  = explode('/',$path);
+
+    // Get the user who is running the import
+    $user = \Drupal\user\Entity\User::load(\Drupal::currentUser()->id())->getUsername();
+    $section = $user . '-' . $arg[2];
+
+    // Add a hidden field
+    // @see https://www.drupal.org/forum/support/module-development-and-code-questions/2015-12-19/drupal-8-submit-handler#comment-11902407
+    $form['section'] = array( 
+      '#type' => 'hidden', 
+      '#attributes' => array( 
+        'id' => 'section', ), 
+      '#default_value' => $section, 
+    );
+    // Add the submit handler so we delete our menus and terms.
+    $form['actions']['submit']['#submit'][] = 'my_module_delete_infrastructure';
+    break;
+  }
+} 
+
+/**
+ * Extra submit handler for feeds_feed_import_writemap_clear_form
+ * Deletes the menu and term when the imported nodes are deleted.
+ */
+function my_module_delete_infrastructure(array &$form, \Drupal\Core\Form\FormStateInterface $form_state){
+  $section = $form_state->getValue('section');
+
+  $menu = Menu::load($section);
+  if(!is_null($menu)){
+    $menu->delete();
+  }
+
+  // I'm assuming that I'm wrong about this being the simplest way to load a taxonomy term...but who knows.
+  // Drupal 8 is so freaking difficult.  Ugh.  Well, at least my kids will keep eating steak once a week 8^)
+  /*
+   */
+  $terms = \Drupal::entityTypeManager()
+    ->getStorage('taxonomy_term')
+    ->loadByProperties(
+      [
+        'name' => $section,
+        'vid' => 'sections',
+      ]);
+  foreach($terms as $term){
+    $term->delete();
   }
 }

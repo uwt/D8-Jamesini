@@ -7,7 +7,6 @@ use Drupal\menu_link_content\Entity\MenuLinkContent;
 use Drupal\system\Entity\Menu;
 use Drupal\taxonomy\Entity;
 use Drupal\taxonomy\Entity\Term;
-define("SECTION", 'sections');
 
 /**
  * TODO: class docs.
@@ -113,25 +112,26 @@ class MymodulecreatenodeController {
     $float_vals = ['left', 'right'];
     $float_choice = array_rand($float_vals, 1);
     $float = $float_vals[$float_choice];
-    //dpm($float, '$float');
 
     $size_vals = ['300x200','600x400', '450x300'];
     $size_choice = array_rand($size_vals, 1);
     $size = $size_vals[$size_choice];
-    //dpm($size, '$size');
 
     $color_vals = ['4b2e83/fff', 'b7a57a/000', '85754d/fff', 'd9d9d9/000', '444444/fff'];
     $color_choice = array_rand($color_vals, 1);
     $color = $color_vals[$color_choice];
-    //dpm($color, '$color');
 
-    $dummy_text = MymodulecreatenodeController::getDummyText('title');
-    $textParts = preg_split("/[\.;,][\s]/", $dummy_text, 4);
-    $rnd = rand(1,2);
-    $text = $textParts[$rnd];
-    //dpm($dummy_text, '$dummy_text');
-    //dpm($textParts, '$textParts');
-    //dpm($text, '$text');
+    $tenets = [];
+    $tenets[] = "Undaunted";
+    $tenets[] = "We > Me";
+    $tenets[] = "Dare to Do";
+    $tenets[] = "Be the First";
+    $tenets[] = "Question the Answer";
+    $tenets[] = "Passion Never Rests";
+    $tenets[] = "Be A World of Good";
+    $tenets[] = "Together We Will";
+    
+    $text = $tenets[array_rand($tenets)];
     
     $url = 'https://dummyimage.com/';
     $url .= $size . '/';
@@ -173,11 +173,9 @@ class MymodulecreatenodeController {
     $response = $client->request($method, $uri_full, $options);
 
     $code = $response->getStatusCode();
-    //dpm($code, '$code');
     if($code == 200){
       $content = $response->getBody()->getContents();
     }else{
-      //dpm('boooooo....no body');
     }
 
     return $content;
