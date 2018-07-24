@@ -7,6 +7,7 @@ use Drupal\menu_link_content\Entity\MenuLinkContent;
 use Drupal\system\Entity\Menu;
 use Drupal\taxonomy\Entity;
 use Drupal\taxonomy\Entity\Term;
+use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 
 /**
  * TODO: class docs.
@@ -18,92 +19,22 @@ class MymodulecreatenodeController {
    */
   public function content() {
     // Output a bit of regular content
+
+    $bobo = entity_get_bundles();
+    //dpm($bobo, '$bobo');
+
+    $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load(3);
+    //dpm($feed, '$feed');
+    $markup = $feed->get('field_section_name')->getString();
+    //dpm($markup, '$markup');
     $build = [
-      '#markup' => t('Hey there Bobo!'),
+      '#markup' => t('Hey there Bobo!') . $markup,
     ];
     return $build;
 }
 
   
 
-  /**
-   * Deletes an existing section term, menu, and associated nodes.
-   * Param $data Array
-   *  section => String vid of the section to delete
-   *  menu => String menu_id of the menu to delete
-   *  nodes => Array of nids to delete
-   *
-   * Return nothing
-   */
-  public function deleteStuff(Array $data){
-    //dpm($data, '$data in deleteStuff()');
-
-    // Delete Menus
-
-    // Delete Nodes
-
-  }
-
-  public function makeNode(Array $data){
-    //dpm($data, '$data in makeNode');
-
-    foreach($data as $v){
-      //dpm($v['title'], 'Node Title: ');
-
-      $node = Node::create(['type' => 'page']);
-      $node->set('title', $v['title']);
-
-      // Load the proper term
-      $query = \Drupal::entityQuery('taxonomy_term')
-        ->condition('vid', 'sections')
-        ->condition('name', $v['section']);
-      $tids = $query->execute();
-      $terms = Term::loadMultiple($tids);
-      $tid = 0;
-      //dpm($terms, '$terms');
-
-      foreach($terms as $term) {
-        //dpm($term->getName(), $term->id());
-        $tid = $term->id();
-      }
-
-      // Get random body text
-      // https://loripsum.net/
-      $body_value = MymodulecreatenodeController::getDummyPageContent();
-
-      //dpm($body_value, '$body_value');
-      //Body can now be an array with a value and a format.
-      //If body field exists.
-      //
-      $body = [
-        'value' => $body_value,
-        'format' => 'basic_html',
-      ];
-      // Set the body field
-      $node->set('body', $body);
-      // Set the author
-      $node->set('uid', 1);
-      // Setting a taxonomy term (see 'Load the proper term' above)
-      $node->field_section[] = ['target_id' => $tid];
-      $node->status = 1;
-      $node->enforceIsNew();
-      $node->save();
-      drupal_set_message( "Node with nid " . $node->id() . " saved!\n");
-
-
-
-      //Create a menu link
-      MenuLinkContent::create([
-        'title' => $v['title'],
-        'link' => 'internal:/node/' . $node->id(),
-        'menu_name' => $v['menuid'],
-      ])->save();
-
-
-
-    } // /foreach
-
-  } // /makeNode
 
   public static function getDummyImage() {
     $content = "";

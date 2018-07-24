@@ -7,6 +7,7 @@
 namespace Drupal\my_module\Plugin\Block;
 
 use Drupal\Core\Block\BlockBase;
+use Drupal\Core\Block\BlockPluginInterface;
 use Drupal\Core\Link;
 use Drupal\Core\Url;
 use Drupal\Core\Cache\Cache; 
@@ -21,7 +22,7 @@ use Drupal\taxonomy\Entity\Term;
  *   category = @Translation("my_module")
  * )
  */
-class SectionMenu extends BlockBase {
+class SectionMenu extends BlockBase implements BlockPluginInterface {
 
   /**
    * {@inheritdoc}
@@ -33,7 +34,7 @@ class SectionMenu extends BlockBase {
     // from the node, then we use the section term to establish
     // the menu name.
     //////////////////////////////////////////////////
-
+    
     // code to get nid
     $node = \Drupal::routeMatch()->getParameter('node');
     if(isset($node)){
@@ -44,15 +45,16 @@ class SectionMenu extends BlockBase {
       // Load the term so we can get the label
       // $menu_name is the string value of the term, which exactly
       // matches the menu name.  No coincidence.
+      // The 'label' is the same as the 'machine name' (if 'machine name' is even a thing)
       $term = Term::load($section_id);
       $menu_name = $term->label();
 
       // Load, build, render, and return the menu
       $parameters = \Drupal::menuTree()->getCurrentRouteMenuTreeParameters($menu_name);
       $menu = \Drupal::menuTree()->load($menu_name, $parameters);
-      $render = \Drupal::menuTree()->build($menu);
-
-      return $render;
+      $built = \Drupal::menuTree()->build($menu);
+      //dpm($render, '$render');
+      return $built;
     }
   }
 

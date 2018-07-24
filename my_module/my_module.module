@@ -22,162 +22,173 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
   // Get the menu placeholder which comes from writemaps.com
   // in the form of page_001_001_001
 
+  $fi = $node->get('feeds_item')->getValue();
+  //dpm($fi, '$fi');
+  $feed_id = $fi[0]['target_id'];
+  //dpm($feed_id, '$feed_id');
+  $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load($feed_id);
+  //dpm($feed, '$feed');
+  //dpm($feed->get('field_section_name')->getString() ,'feed section name');
+
   $mp = $node->get('field_menu_placeholder')->getString();
-  // If the node being created doesn't have a menu placeholder, don't ron this code. 
+  
+  // If the node being created doesn't have a menu placeholder, don't run this code. 
   if(strlen($mp) == 0){
   }else{
 
-  ////////////////////////////////////////////////////////////
-  // The section and menu machine names are of the format "username-feed_id"
-  // or "bob-4".
-  ////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////
+    // The section and menu machine names are of the format "username-feed_id"
+    // or "bob-4".
+    ////////////////////////////////////////////////////////////
 
 
-  // Get the user who is running the import
-  // this is the 'bob' portion of 'bob-4'
-  $user = \Drupal\user\Entity\User::load(\Drupal::currentUser()->id())->getUsername();
+    // Get the user who is running the import
+    // this is the 'bob' portion of 'bob-4'
+    //$user = \Drupal\user\Entity\User::load(\Drupal::currentUser()->id())->getUsername();
 
-  // Get the 'feeds_item' field value
-  // This is the '4' portion of 'bob-4'
-  $fi_value = $node->get('feeds_item')->getValue();
-  $feed_item_id = $fi_value[0]['target_id'];
-
-  // Create the temporary section name
-  $section = $user .'-'. $feed_item_id;
-
-
-  // Try to load the proper term
-  $new_term_vid = 'sections';
-  $query = \Drupal::entityQuery('taxonomy_term')
-    ->condition('vid', $new_term_vid)
-    ->condition('name', $section);
-  $tids = $query->execute();
-  $term = Term::loadMultiple($tids);
+    // Get the 'feeds_item' field value
+    // This is the '4' portion of 'bob-4'
+    $fi_value = $node->get('feeds_item')->getValue();
+    $feed_item_id = array($fi_value[0]['target_id']);
+    //dpm($feed_item_id, '$feed_item_id');
+    $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load($feed_item_id[0]);
+    
+    $section = $feed->get('title')->getString();
+  
 
 
-  // If the term doesn't exist, create it then use it.  
-  // If it does exist, just use it.
-  if(empty($term)){
-    $new_term = Term::create(['vid' => $new_term_vid, 'name' => $section]);
-    $new_term->save();
-    $node->set('field_section', $new_term->id());
-  }else{
-    $existing_term_id = reset($term);
-    $existing_term = Term::load($existing_term_id->id());
-    $node->set('field_section', $existing_term_id);
-  }
+    // Try to load the proper term
+    $new_term_vid = 'sections';
+    $query = \Drupal::entityQuery('taxonomy_term')
+      ->condition('vid', $new_term_vid)
+      ->condition('name', $section);
+    $tids = $query->execute();
+    $term = Term::loadMultiple($tids);
 
 
-
-  ////////////////////////////////////////////////////////////
-  // Does the menu need to be created?
-  // Similar to the section above, we need to determine whether
-  // or not the menu already exists. The menu should be named
-  // the same as the section.
-  ////////////////////////////////////////////////////////////
-
-  // If the menu exists, just use it.
-  $menu = Menu::load($section);
-  // If the menu doesn't exist, create it then use it.
-  if(empty($menu)) {
-    Menu::create([
-      'id' => $section,
-      'label' => $section,
-      'description' => 'Description for: ' . $section . ' menu',
-    ])->save();
-  }
-
-  // Add the 'realistic' dummy page content.
-  $node_body = MymodulecreatenodeController::getDummyPageContent();
-  // Get the user who is running the import
-  $user = \Drupal\user\Entity\User::load(\Drupal::currentUser()->id())->getUsername();
-  $node->body = array('format' => 'full_html', 'value' => $node_body);
-  $node->save();
-
-
-  ////////////////////////////////////////////////////////////
-  // Make menus nested.  Have fun, yo.
-  // Ok, here's the logic that *should* work:
-  // 1) Get the existing menu hierarchy ($mh)
-  // 2) Get the current menu item placeholder
-  // 2.1) Get the number of segments in the current menu item placeholder
-  // 3) Get the number of segments in the previous menu item of the menu hierarchy
-  // 4) IF: the previous menu item has fewer segments than the current menu item placeholder,
-  //    then the previous menu item is the parent of the current parent.
-  //    ELSE: travel to the next menu item placeholder in the hierarchy and check again.
-  //    Keep doing this until a parent is set.   
-  ////////////////////////////////////////////////////////////
-
-  // Load an existing menu placeholder
-  $tempstore = \Drupal::service('user.private_tempstore')->get('my_module');
-
-  // $holder stores the hierarchy. At this point it does NOT contain the current node.
-  $holder = array();
-  $holder =  $tempstore->get($section);
-
-  // $mip = Menu Item Placeholder. This is the 'hierarchy string' included with the node on import.
-  $mip = $node->get('field_menu_placeholder')->getString();
-
-  // Add the current node to the hierarchy list
-  $holder[$mip] = $node->id();
-
-  // Update the temporary storage with the updated data
-  $tempstore->set($section, $holder);
-
-  // $mh = Menu Hierarchy. The temporary menu hierarchy storage, including the
-  // current node.
-  $mh = $tempstore->get($section);
-  // We want to reverse the array so we can travel through it with a normal foreach()
-  // @see fatty notes above about the logic.
-
-  // $tmphi = TeMPorary HIerarchy
-  $tmphi = array_reverse($mh, TRUE);
-
-  // Sending NULL 'parent'  to the menu link creating method works fine.
-  $parent = NULL;
-
-  //dpm($term, '$term');
-  // Menu Item Placeholder Segments tells us how deep in the hierarchy a menu item is.
-  // We are trying to figure out what the parent menu item is and then set that menu item
-  // as the parent of this menu item.
-
-  // $mip_segments is the 'depth' of the current menu item in the hierarchy
-  $mip_segments = substr_count($mip, '_');
-
-  foreach($tmphi as $placeholder => $nid){
-    // $segments is the count of the 'depth' in the hierarchy
-    $segments = substr_count($placeholder, '_');
-
-    if($segments < $mip_segments){
-
-      $parent_nid = $mh[$placeholder];
-      $menu_link_manager = \Drupal::service('plugin.manager.menu.link');
-      $results = $menu_link_manager->loadLinksByRoute('entity.node.canonical', array('node' => $parent_nid));
-
-      foreach($results as $result){
-        $link_id = $result->getPluginId();
-        $link_menu = $result->getmenuName();
-        if($link_menu == $section){
-          $parent = $link_id;
-        }
-      } // /foreach over the loadLinksByRoute()
-
-      break;
+    // If the term doesn't exist, create it then use it.  
+    // If it does exist, just use it.
+    if(empty($term)){
+      $new_term = Term::create(['vid' => $new_term_vid, 'name' => $section]);
+      $new_term->save();
+      $node->set('field_section', $new_term->id());
+    }else{
+      $existing_term_id = reset($term);
+      $existing_term = Term::load($existing_term_id->id());
+      $node->set('field_section', $existing_term_id);
     }
-  }
 
 
-  //dpm($parent, '$parent just prior to creatig the link');
-  //Create a menu link
-  // @see https://drupal.stackexchange.com/a/257797
-  MenuLinkContent::create([
-    'title' => $node->getTitle(),
-    'link' => 'internal:/node/' . $node->id(),
-    'menu_name' => $section,
-    'parent' => $parent,
-    'expanded' => TRUE,
-  ])->save();
-}// end of 'was this node created by the import script?'
+
+    ////////////////////////////////////////////////////////////
+    // Does the menu need to be created?
+    // Similar to the section above, we need to determine whether
+    // or not the menu already exists. The menu should be named
+    // the same as the section.
+    ////////////////////////////////////////////////////////////
+
+    // If the menu exists, just use it.
+    $menu = Menu::load($section);
+    // If the menu doesn't exist, create it then use it.
+    if(empty($menu)) {
+      Menu::create([
+        'id' => $section,
+        'label' => $section,
+        'description' => 'Description for: ' . $section . ' menu',
+      ])->save();
+    }
+
+    // Add the 'realistic' dummy page content.
+    $node_body = MymodulecreatenodeController::getDummyPageContent();
+    // Get the user who is running the import
+    $user = \Drupal\user\Entity\User::load(\Drupal::currentUser()->id())->getUsername();
+    $node->body = array('format' => 'full_html', 'value' => $node_body);
+    $node->save();
+
+
+    ////////////////////////////////////////////////////////////
+    // Make menus nested.  Have fun, yo.
+    // Ok, here's the logic that *should* work:
+    // 1) Get the existing menu hierarchy ($mh)
+    // 2) Get the current menu item placeholder
+    // 2.1) Get the number of segments in the current menu item placeholder
+    // 3) Get the number of segments in the previous menu item of the menu hierarchy
+    // 4) IF: the previous menu item has fewer segments than the current menu item placeholder,
+    //    then the previous menu item is the parent of the current parent.
+    //    ELSE: travel to the next menu item placeholder in the hierarchy and check again.
+    //    Keep doing this until a parent is set.   
+    ////////////////////////////////////////////////////////////
+
+    // Load an existing menu placeholder
+    $tempstore = \Drupal::service('user.private_tempstore')->get('my_module');
+
+    // $holder stores the hierarchy. At this point it does NOT contain the current node.
+    $holder = array();
+    $holder =  $tempstore->get($section);
+
+    // $mip = Menu Item Placeholder. This is the 'hierarchy string' included with the node on import.
+    $mip = $node->get('field_menu_placeholder')->getString();
+
+    // Add the current node to the hierarchy list
+    $holder[$mip] = $node->id();
+
+    // Update the temporary storage with the updated data
+    $tempstore->set($section, $holder);
+
+    // $mh = Menu Hierarchy. The temporary menu hierarchy storage, including the
+    // current node.
+    $mh = $tempstore->get($section);
+    // We want to reverse the array so we can travel through it with a normal foreach()
+    // @see fatty notes above about the logic.
+
+    // $tmphi = TeMPorary HIerarchy
+    $tmphi = array_reverse($mh, TRUE);
+
+    // Sending NULL 'parent'  to the menu link creating method works fine.
+    $parent = NULL;
+
+    //dpm($term, '$term');
+    // Menu Item Placeholder Segments tells us how deep in the hierarchy a menu item is.
+    // We are trying to figure out what the parent menu item is and then set that menu item
+    // as the parent of this menu item.
+
+    // $mip_segments is the 'depth' of the current menu item in the hierarchy
+    $mip_segments = substr_count($mip, '_');
+
+    foreach($tmphi as $placeholder => $nid){
+      // $segments is the count of the 'depth' in the hierarchy
+      $segments = substr_count($placeholder, '_');
+
+      if($segments < $mip_segments){
+
+        $parent_nid = $mh[$placeholder];
+        $menu_link_manager = \Drupal::service('plugin.manager.menu.link');
+        $results = $menu_link_manager->loadLinksByRoute('entity.node.canonical', array('node' => $parent_nid));
+
+        foreach($results as $result){
+          $link_id = $result->getPluginId();
+          $link_menu = $result->getmenuName();
+          if($link_menu == $section){
+            $parent = $link_id;
+          }
+        } // /foreach over the loadLinksByRoute()
+
+        break;
+      }
+    }
+
+
+    //dpm($parent, '$parent just prior to creatig the link');
+    //Create a menu link
+    // @see https://drupal.stackexchange.com/a/257797
+    MenuLinkContent::create([
+      'title' => $node->getTitle(),
+      'link' => 'internal:/node/' . $node->id(),
+      'menu_name' => $section,
+      'parent' => $parent,
+      'expanded' => TRUE,
+    ])->save();
+  }// end of 'was this node created by the import script?'
 }
 
 /**
@@ -192,9 +203,14 @@ function my_module_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form
     $path = \Drupal::request()->getpathInfo();
     $arg  = explode('/',$path);
 
+    $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load($arg[2]);
+    $section = $feed->get('title')->getString();
+    
     // Get the user who is running the import
-    $user = \Drupal\user\Entity\User::load(\Drupal::currentUser()->id())->getUsername();
-    $section = $user . '-' . $arg[2];
+    //$user = \Drupal\user\Entity\User::load(\Drupal::currentUser()->id())->getUsername();
+    //$section = $user . '-' . $arg[2];
+    
+    
     $tempstore = \Drupal::service('user.private_tempstore')->get('my_module');
     $tempstore->set($section, array());
     break;
@@ -203,10 +219,14 @@ function my_module_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form
     // Add the section variable so it gets passed to our custom submit handler.
     $path = \Drupal::request()->getpathInfo();
     $arg  = explode('/',$path);
-
+    
+    //dpm($arg[2], 'arg2');
+    $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load($arg[2]);
+    $section = $feed->get('title')->getString();
     // Get the user who is running the import
-    $user = \Drupal\user\Entity\User::load(\Drupal::currentUser()->id())->getUsername();
-    $section = $user . '-' . $arg[2];
+    //$user = \Drupal\user\Entity\User::load(\Drupal::currentUser()->id())->getUsername();
+    
+    //$section = $user . '-' . $arg[2];
 
     // Add a hidden field
     // @see https://www.drupal.org/forum/support/module-development-and-code-questions/2015-12-19/drupal-8-submit-handler#comment-11902407
@@ -234,10 +254,10 @@ function my_module_delete_infrastructure(array &$form, \Drupal\Core\Form\FormSta
     $menu->delete();
   }
 
-  // I'm assuming that I'm wrong about this being the simplest way to load a taxonomy term...but who knows.
-  // Drupal 8 is so freaking difficult.  Ugh.  Well, at least my kids will keep eating steak once a week 8^)
-  /*
-   */
+  // I'm assuming that I'm wrong about this being the simplest way to load 
+  // a taxonomy term...but who knows.
+  // Drupal 8 is so freaking difficult.  Ugh.  Well, at least my kids will 
+  // keep eating steak once a week 8^)
   $terms = \Drupal::entityTypeManager()
     ->getStorage('taxonomy_term')
     ->loadByProperties(
@@ -247,5 +267,37 @@ function my_module_delete_infrastructure(array &$form, \Drupal\Core\Form\FormSta
       ]);
   foreach($terms as $term){
     $term->delete();
+  }
+}
+
+
+/**
+ *  Implements hook_theme.
+ *  So far, this just tells Drupal to use the template defined in our module.
+ *  Variables are sent to this template via template_theme()
+ *  @see my_module_preprocess_block()
+ */
+function my_module_theme($existing, $type, $theme, $path){
+  $return = [];
+  $return['block__section_menu'] = [
+    'template' => 'block--section-menu',
+    'base hook' => 'block',
+  ];
+  return $return;
+}
+
+/**
+ *  Implements hook_preprocess_block().
+ *  So far this is how we send variables to our template.
+ *  @see my_module_theme()
+ */
+function my_module_preprocess_block(&$variables){
+  $config = $variables['elements']['#configuration'];
+  if($config['id'] == 'section_menu' && $config['provider'] == 'my_module'){
+    // Get the actual menu name
+    $menu_id = $variables['elements']['content']['#menu_name'];
+    $menu = Menu::load($menu_id);
+    $menu_name = $menu->label();
+    $variables['section'] = $menu_name;
   }
 }
