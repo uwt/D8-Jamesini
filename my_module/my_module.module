@@ -19,42 +19,34 @@ function my_module_page_attachments(array &$page) {
  *  2) Assign a menu item in the proper hierarchy.
  */
 function my_module_node_insert(Drupal\node\NodeInterface $node) {
+
+
+
+
+
+
+
   // Get the menu placeholder which comes from writemaps.com
   // in the form of page_001_001_001
-
   $fi = $node->get('feeds_item')->getValue();
-  //dpm($fi, '$fi');
   $feed_id = $fi[0]['target_id'];
-  //dpm($feed_id, '$feed_id');
   $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load($feed_id);
-  //dpm($feed, '$feed');
-  //dpm($feed->get('field_section_name')->getString() ,'feed section name');
 
   $mp = $node->get('field_menu_placeholder')->getString();
-  
+
   // If the node being created doesn't have a menu placeholder, don't run this code. 
   if(strlen($mp) == 0){
   }else{
 
-    ////////////////////////////////////////////////////////////
-    // The section and menu machine names are of the format "username-feed_id"
-    // or "bob-4".
-    ////////////////////////////////////////////////////////////
-
-
-    // Get the user who is running the import
-    // this is the 'bob' portion of 'bob-4'
-    //$user = \Drupal\user\Entity\User::load(\Drupal::currentUser()->id())->getUsername();
 
     // Get the 'feeds_item' field value
     // This is the '4' portion of 'bob-4'
     $fi_value = $node->get('feeds_item')->getValue();
     $feed_item_id = array($fi_value[0]['target_id']);
-    //dpm($feed_item_id, '$feed_item_id');
     $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load($feed_item_id[0]);
-    
+
     $section = $feed->get('title')->getString();
-  
+
 
 
     // Try to load the proper term
@@ -98,12 +90,25 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
       ])->save();
     }
 
-    // Add the 'realistic' dummy page content.
-    $node_body = MymodulecreatenodeController::getDummyPageContent();
-    // Get the user who is running the import
-    $user = \Drupal\user\Entity\User::load(\Drupal::currentUser()->id())->getUsername();
+
+
+    // Add body content.  Body content is either
+    // 1) grabbed from the WriteMaps Page Content/Notes
+    // or
+    // 2) generated dummy content
+
+    $bodyValue = $node->get('body')->getValue();
+    // Add content from WriteMaps
+    $node_body = $bodyValue[0]['value'];
+    if(strlen($node_body) <= 8){
+      // Add the 'realistic' dummy page content.
+      $node_body = MymodulecreatenodeController::getDummyPageContent();
+    }
+
     $node->body = array('format' => 'full_html', 'value' => $node_body);
     $node->save();
+
+
 
 
     ////////////////////////////////////////////////////////////
@@ -147,7 +152,6 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
     // Sending NULL 'parent'  to the menu link creating method works fine.
     $parent = NULL;
 
-    //dpm($term, '$term');
     // Menu Item Placeholder Segments tells us how deep in the hierarchy a menu item is.
     // We are trying to figure out what the parent menu item is and then set that menu item
     // as the parent of this menu item.
@@ -193,11 +197,21 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
 
 /**
  * Implements hook_form_alter()
- * When a user gets to the "Are you sure you want to import the feed FEED NAME?" (feed/%/import)
- * we want to delete the existing temporary variable
+ * When a user submits the "Are you sure you want to import the feed FEED NAME?"
+ * (feed/%/import) we want to delete the menu and section associted with this feed.
+ *
+ * For some reason, when using the "Save and import" button on the feed/%/edit form
+ * some of the resultant menu items aren't properly placed in the hierarchy.  I don't
+ * know why, so I'm going to disable the "Save and import" button, and leave the "Save" button.
  */
 function my_module_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id){
   switch($form_id){
+
+  case 'feeds_feed_import_writemap_form':
+    // Remove the 'Save and import' button.
+    unset($form['actions']['import']);
+    break;
+
   case 'feeds_feed_import_writemap_import_form':
 
     $path = \Drupal::request()->getpathInfo();
@@ -205,12 +219,7 @@ function my_module_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form
 
     $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load($arg[2]);
     $section = $feed->get('title')->getString();
-    
-    // Get the user who is running the import
-    //$user = \Drupal\user\Entity\User::load(\Drupal::currentUser()->id())->getUsername();
-    //$section = $user . '-' . $arg[2];
-    
-    
+
     $tempstore = \Drupal::service('user.private_tempstore')->get('my_module');
     $tempstore->set($section, array());
     break;
@@ -219,14 +228,9 @@ function my_module_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form
     // Add the section variable so it gets passed to our custom submit handler.
     $path = \Drupal::request()->getpathInfo();
     $arg  = explode('/',$path);
-    
-    //dpm($arg[2], 'arg2');
+
     $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load($arg[2]);
     $section = $feed->get('title')->getString();
-    // Get the user who is running the import
-    //$user = \Drupal\user\Entity\User::load(\Drupal::currentUser()->id())->getUsername();
-    
-    //$section = $user . '-' . $arg[2];
 
     // Add a hidden field
     // @see https://www.drupal.org/forum/support/module-development-and-code-questions/2015-12-19/drupal-8-submit-handler#comment-11902407

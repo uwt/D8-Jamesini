@@ -21,12 +21,9 @@ class MymodulecreatenodeController {
     // Output a bit of regular content
 
     $bobo = entity_get_bundles();
-    //dpm($bobo, '$bobo');
 
     $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load(3);
-    //dpm($feed, '$feed');
     $markup = $feed->get('field_section_name')->getString();
-    //dpm($markup, '$markup');
     $build = [
       '#markup' => t('Hey there Bobo!') . $markup,
     ];

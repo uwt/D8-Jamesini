@@ -53,7 +53,6 @@ class SectionMenu extends BlockBase implements BlockPluginInterface {
       $parameters = \Drupal::menuTree()->getCurrentRouteMenuTreeParameters($menu_name);
       $menu = \Drupal::menuTree()->load($menu_name, $parameters);
       $built = \Drupal::menuTree()->build($menu);
-      //dpm($render, '$render');
       return $built;
     }
   }
