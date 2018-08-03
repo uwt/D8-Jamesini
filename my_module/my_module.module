@@ -38,16 +38,12 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
   if(strlen($mp) == 0){
   }else{
 
-
     // Get the 'feeds_item' field value
-    // This is the '4' portion of 'bob-4'
     $fi_value = $node->get('feeds_item')->getValue();
     $feed_item_id = array($fi_value[0]['target_id']);
     $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load($feed_item_id[0]);
 
     $section = $feed->get('title')->getString();
-
-
 
     // Try to load the proper term
     $new_term_vid = 'sections';
@@ -182,7 +178,6 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
     }
 
 
-    //dpm($parent, '$parent just prior to creatig the link');
     //Create a menu link
     // @see https://drupal.stackexchange.com/a/257797
     MenuLinkContent::create([
