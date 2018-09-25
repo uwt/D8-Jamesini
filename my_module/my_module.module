@@ -44,6 +44,7 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
     $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load($feed_item_id[0]);
 
     $section = $feed->get('title')->getString();
+    $section_machine = _machine_friendly($section);
 
     // Try to load the proper term
     $new_term_vid = 'sections';
@@ -79,6 +80,8 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
     $menu = Menu::load($section);
     // If the menu doesn't exist, create it then use it.
     if(empty($menu)) {
+
+
       Menu::create([
         'id' => $section,
         'label' => $section,
@@ -125,8 +128,9 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
 
     // $holder stores the hierarchy. At this point it does NOT contain the current node.
     $holder = array();
+    dpm($section_machine, '$section_machine before getting');
     $holder =  $tempstore->get($section);
-
+    dpm($holder, '$holder');
     // $mip = Menu Item Placeholder. This is the 'hierarchy string' included with the node on import.
     $mip = $node->get('field_menu_placeholder')->getString();
 
@@ -215,6 +219,10 @@ function my_module_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form
     $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load($arg[2]);
     $section = $feed->get('title')->getString();
 
+
+    $section_machine = _machine_friendly($section);
+
+
     $tempstore = \Drupal::service('user.private_tempstore')->get('my_module');
     $tempstore->set($section, array());
     break;
@@ -227,12 +235,15 @@ function my_module_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form
     $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load($arg[2]);
     $section = $feed->get('title')->getString();
 
+    $section_machine = _machine_friendly($section);
+    
     // Add a hidden field
     // @see https://www.drupal.org/forum/support/module-development-and-code-questions/2015-12-19/drupal-8-submit-handler#comment-11902407
     $form['section'] = array( 
       '#type' => 'hidden', 
       '#attributes' => array( 
-        'id' => 'section', ), 
+        'id' => 'section', 
+      ), 
       '#default_value' => $section, 
     );
     // Add the submit handler so we delete our menus and terms.
@@ -247,6 +258,10 @@ function my_module_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form
  */
 function my_module_delete_infrastructure(array &$form, \Drupal\Core\Form\FormStateInterface $form_state){
   $section = $form_state->getValue('section');
+
+
+$section_machine = _machine_friendly($section);
+
 
   $menu = Menu::load($section);
   if(!is_null($menu)){
@@ -299,4 +314,20 @@ function my_module_preprocess_block(&$variables){
     $menu_name = $menu->label();
     $variables['section'] = $menu_name;
   }
+}
+
+/**
+ * Convert a string into a machine-name-friendly version.
+ */
+function _machine_friendly($string){
+  $patterns[0] = '/[\s]/i';
+  $replacements[0] = "-";
+  $section = $string;
+
+  $section_machine = preg_replace($patterns, $replacements, $section);
+  $section_machine = strtolower($section_machine);
+  
+  dpm($section_machine, '$section_machine in  _machine_friendly()');
+
+  return $section_machine;
 }
