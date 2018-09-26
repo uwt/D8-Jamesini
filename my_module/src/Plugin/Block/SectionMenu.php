@@ -46,6 +46,7 @@ class SectionMenu extends BlockBase implements BlockPluginInterface {
       // $menu_name is the string value of the term, which exactly
       // matches the menu name.  No coincidence.
       // The 'label' is the same as the 'machine name' (if 'machine name' is even a thing)
+        if($section_id !== ""){
       $term = Term::load($section_id);
       $menu_name = $term->label();
 
@@ -54,6 +55,9 @@ class SectionMenu extends BlockBase implements BlockPluginInterface {
       $menu = \Drupal::menuTree()->load($menu_name, $parameters);
       $built = \Drupal::menuTree()->build($menu);
       return $built;
+        }else{
+            return array();
+        }
     }
   }
 
