@@ -8,8 +8,8 @@ namespace Drupal\my_module\Plugin\Block;
 
 use Drupal\Core\Block\BlockBase;
 use Drupal\Core\Block\BlockPluginInterface;
-use Drupal\Core\Link;
-use Drupal\Core\Url;
+//use Drupal\Core\Link;
+//use Drupal\Core\Url;
 use Drupal\Core\Cache\Cache; 
 use Drupal\taxonomy\Entity\Term;
 
@@ -29,7 +29,7 @@ class SectionMenu extends BlockBase implements BlockPluginInterface {
    */
   public function build() {
     //////////////////////////////////////////////////
-    // Loading and displayig the Section Menu.
+    // Loading and displaying the Section Menu.
     // First, we gotta get the node, then we get the section term
     // from the node, then we use the section term to establish
     // the menu name.

@@ -15,8 +15,8 @@ class RouteSubscriber extends RouteSubscriberBase {
 	 */
 	protected function alterRoutes(RouteCollection $collection) {
 
-    $bobo = $collection->all();
-    dpm($bobo, '$bobo');
+    //$bobo = $collection->all();
+    //dpm($bobo, '$bobo');
 
 		// Change path '/user/login' to '/login'.
 		/*
