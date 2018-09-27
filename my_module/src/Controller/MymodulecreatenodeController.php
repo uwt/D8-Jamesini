@@ -2,12 +2,16 @@
 
 namespace Drupal\my_module\Controller;
 
-use Drupal\node\Entity\Node;
-use Drupal\menu_link_content\Entity\MenuLinkContent;
-use Drupal\system\Entity\Menu;
-use Drupal\taxonomy\Entity;
-use Drupal\taxonomy\Entity\Term;
-use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
+//use Drupal\node\Entity\Node;
+//use Drupal\menu_link_content\Entity\MenuLinkContent;
+//use Drupal\system\Entity\Menu;
+//use Drupal\taxonomy\Entity;
+//use Drupal\taxonomy\Entity\Term;
+//use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
+
+use Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException;
+use Drupal\Component\Plugin\Exception\PluginNotFoundException;
+use GuzzleHttp\Exception\GuzzleException;
 
 /**
  * TODO: class docs.
@@ -20,32 +24,45 @@ class MymodulecreatenodeController {
   public function content() {
     // Output a bit of regular content
 
-    $bobo = entity_get_bundles();
+    try {
+      $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load(3);
+      $markup = $feed->get('field_section_name')->getString();
+      $build = [
+        '#markup' => t('Hey there Bobo!') . $markup,
+      ];
 
-    $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load(3);
-    $markup = $feed->get('field_section_name')->getString();
-    $build = [
-      '#markup' => t('Hey there Bobo!') . $markup,
-    ];
-    return $build;
-}
+      return $build;
 
-  
+    } catch (InvalidPluginDefinitionException $e) {
+      return $e->getMessage();
+    } catch (PluginNotFoundException $e) {
+      return $e->getMessage();
+    }
+
+  }
 
 
+  /**
+   * @return string
+   */
   public static function getDummyImage() {
-    $content = "";
-    
-    // Add a random float for variety  
-    $float_vals = ['left', 'right'];
-    $float_choice = array_rand($float_vals, 1);
-    $float = $float_vals[$float_choice];
 
-    $size_vals = ['300x200','600x400', '450x300'];
+    // Add a random float for variety
+    $float_values = ['left', 'right'];
+    $float_choice = array_rand($float_values, 1);
+    $float = $float_values[$float_choice];
+
+    $size_vals = ['300x200', '600x400', '450x300'];
     $size_choice = array_rand($size_vals, 1);
     $size = $size_vals[$size_choice];
 
-    $color_vals = ['4b2e83/fff', 'b7a57a/000', '85754d/fff', 'd9d9d9/000', '444444/fff'];
+    $color_vals = [
+      '4b2e83/fff',
+      'b7a57a/000',
+      '85754d/fff',
+      'd9d9d9/000',
+      '444444/fff',
+    ];
     $color_choice = array_rand($color_vals, 1);
     $color = $color_vals[$color_choice];
 
@@ -58,9 +75,9 @@ class MymodulecreatenodeController {
     $tenets[] = "Passion Never Rests";
     $tenets[] = "Be A World of Good";
     $tenets[] = "Together We Will";
-    
+
     $text = $tenets[array_rand($tenets)];
-    
+
     $url = 'https://dummyimage.com/';
     $url .= $size . '/';
     $url .= $color;
@@ -68,55 +85,60 @@ class MymodulecreatenodeController {
     $url .= $text;
 
 
-    $content = '<img src="'.$url.'" alt="'.$text.'" data-align="'.$float.'" />';
-    
+    $content = '<img src="' . $url . '" alt="' . $text . '" data-align="' . $float . '" />';
+
     return $content;
   }
 
 
-  public static function getDummyText(string $type = 'html'){
+  public static function getDummyText(string $type = 'html') {
     $content = "";
     $options = [];
     $client = \Drupal::httpClient();
+    $uri = "";
+    $uri_params = "";
 
 
+    switch ($type) {
+      case 'html':
+        $uri = 'https://loripsum.net/api/';
+        $uri_params = rand(2, 4);
+        $uri_params .= '/medium/headers/decorate/bq/ul';
+        break;
 
-    switch($type){
-    case 'html':
-      $uri = 'https://loripsum.net/api/';
-      $uri_params = rand(2,4);
-      $uri_params .= '/medium/headers/decorate/bq/ul';
-      break;
-
-    case 'title':
-      $uri = 'https://loripsum.net/api/';
-      $uri_params = '1/medium/plaintext';
-      break;
+      case 'title':
+        $uri = 'https://loripsum.net/api/';
+        $uri_params = '1/medium/plaintext';
+        break;
 
     }
 
     $uri_full = $uri . $uri_params;
     $method = 'GET';
 
-    $response = $client->request($method, $uri_full, $options);
+    try {
+      $response = $client->request($method, $uri_full, $options);
+      $code = $response->getStatusCode();
+      if ($code == 200) {
+        $content = $response->getBody()->getContents();
+      }
 
-    $code = $response->getStatusCode();
-    if($code == 200){
-      $content = $response->getBody()->getContents();
-    }else{
+      return $content;
+    } catch (GuzzleException $e) {
+      return $e->getMessage();
     }
 
-    return $content;
+
   }
 
   public static function getDummyPageContent() {
-  
-      $body_value  = "";
-      $body_value .= MymodulecreatenodeController::getDummyImage();
-      $body_value .= MymodulecreatenodeController::getDummyText();
-      $body_value .= MymodulecreatenodeController::getDummyImage();
-      $body_value .= MymodulecreatenodeController::getDummyText();
-      return $body_value;
+
+    $body_value = "";
+    $body_value .= MymodulecreatenodeController::getDummyImage();
+    $body_value .= MymodulecreatenodeController::getDummyText();
+    $body_value .= MymodulecreatenodeController::getDummyImage();
+    $body_value .= MymodulecreatenodeController::getDummyText();
+    return $body_value;
   }
 
 

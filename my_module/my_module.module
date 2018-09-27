@@ -21,30 +21,26 @@ function my_module_page_attachments(array &$page) {
 function my_module_node_insert(Drupal\node\NodeInterface $node) {
 
 
-
-
-
-
-
   // Get the menu placeholder which comes from writemaps.com
   // in the form of page_001_001_001
-  $fi = $node->get('feeds_item')->getValue();
-  $feed_id = $fi[0]['target_id'];
-  $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load($feed_id);
+  //$fi = $node->get('feeds_item')->getValue();
+
 
   $mp = $node->get('field_menu_placeholder')->getString();
 
   // If the node being created doesn't have a menu placeholder, don't run this code. 
-  if(strlen($mp) == 0){
-  }else{
+  if (strlen($mp) == 0) {
+  }
+  else {
 
     // Get the 'feeds_item' field value
     $fi_value = $node->get('feeds_item')->getValue();
-    $feed_item_id = array($fi_value[0]['target_id']);
-    $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load($feed_item_id[0]);
+    $feed_item_id = [$fi_value[0]['target_id']];
+    $feed = \Drupal::entityTypeManager()
+      ->getStorage('feeds_feed')
+      ->load($feed_item_id[0]);
 
     $section = $feed->get('title')->getString();
-    $section_machine = _machine_friendly($section);
 
     // Try to load the proper term
     $new_term_vid = 'sections';
@@ -57,16 +53,16 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
 
     // If the term doesn't exist, create it then use it.  
     // If it does exist, just use it.
-    if(empty($term)){
+    if (empty($term)) {
       $new_term = Term::create(['vid' => $new_term_vid, 'name' => $section]);
       $new_term->save();
       $node->set('field_section', $new_term->id());
-    }else{
+    }
+    else {
       $existing_term_id = reset($term);
-      $existing_term = Term::load($existing_term_id->id());
+
       $node->set('field_section', $existing_term_id);
     }
-
 
 
     ////////////////////////////////////////////////////////////
@@ -79,7 +75,7 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
     // If the menu exists, just use it.
     $menu = Menu::load($section);
     // If the menu doesn't exist, create it then use it.
-    if(empty($menu)) {
+    if (empty($menu)) {
 
 
       Menu::create([
@@ -90,7 +86,6 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
     }
 
 
-
     // Add body content.  Body content is either
     // 1) grabbed from the WriteMaps Page Content/Notes
     // or
@@ -99,15 +94,13 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
     $bodyValue = $node->get('body')->getValue();
     // Add content from WriteMaps
     $node_body = $bodyValue[0]['value'];
-    if(strlen($node_body) <= 8){
+    if (strlen($node_body) <= 8) {
       // Add the 'realistic' dummy page content.
       $node_body = MymodulecreatenodeController::getDummyPageContent();
     }
 
-    $node->body = array('format' => 'full_html', 'value' => $node_body);
+    $node->body = ['format' => 'full_html', 'value' => $node_body];
     $node->save();
-
-
 
 
     ////////////////////////////////////////////////////////////
@@ -127,10 +120,8 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
     $tempstore = \Drupal::service('user.private_tempstore')->get('my_module');
 
     // $holder stores the hierarchy. At this point it does NOT contain the current node.
-    $holder = array();
-    dpm($section_machine, '$section_machine before getting');
-    $holder =  $tempstore->get($section);
-    dpm($holder, '$holder');
+
+    $holder = $tempstore->get($section);
     // $mip = Menu Item Placeholder. This is the 'hierarchy string' included with the node on import.
     $mip = $node->get('field_menu_placeholder')->getString();
 
@@ -159,20 +150,20 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
     // $mip_segments is the 'depth' of the current menu item in the hierarchy
     $mip_segments = substr_count($mip, '_');
 
-    foreach($tmphi as $placeholder => $nid){
+    foreach ($tmphi as $placeholder => $nid) {
       // $segments is the count of the 'depth' in the hierarchy
       $segments = substr_count($placeholder, '_');
 
-      if($segments < $mip_segments){
+      if ($segments < $mip_segments) {
 
         $parent_nid = $mh[$placeholder];
         $menu_link_manager = \Drupal::service('plugin.manager.menu.link');
-        $results = $menu_link_manager->loadLinksByRoute('entity.node.canonical', array('node' => $parent_nid));
+        $results = $menu_link_manager->loadLinksByRoute('entity.node.canonical', ['node' => $parent_nid]);
 
-        foreach($results as $result){
+        foreach ($results as $result) {
           $link_id = $result->getPluginId();
           $link_menu = $result->getmenuName();
-          if($link_menu == $section){
+          if ($link_menu == $section) {
             $parent = $link_id;
           }
         } // /foreach over the loadLinksByRoute()
@@ -196,75 +187,79 @@ function my_module_node_insert(Drupal\node\NodeInterface $node) {
 
 /**
  * Implements hook_form_alter()
- * When a user submits the "Are you sure you want to import the feed FEED NAME?"
- * (feed/%/import) we want to delete the menu and section associted with this feed.
+ * When a user submits the "Are you sure you want to import the feed FEED
+ * NAME?"
+ * (feed/%/import) we want to delete the menu and section associted with this
+ * feed.
  *
- * For some reason, when using the "Save and import" button on the feed/%/edit form
- * some of the resultant menu items aren't properly placed in the hierarchy.  I don't
- * know why, so I'm going to disable the "Save and import" button, and leave the "Save" button.
+ * For some reason, when using the "Save and import" button on the feed/%/edit
+ * form some of the resultant menu items aren't properly placed in the
+ * hierarchy.  I don't know why, so I'm going to disable the "Save and import"
+ * button, and leave the "Save" button.
  */
-function my_module_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id){
-  switch($form_id){
+function my_module_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
+  switch ($form_id) {
 
-  case 'feeds_feed_import_writemap_form':
-    // Remove the 'Save and import' button.
-    unset($form['actions']['import']);
-    break;
+    case 'feeds_feed_import_writemap_form':
+      // Remove the 'Save and import' button.
+      unset($form['actions']['import']);
+      break;
 
-  case 'feeds_feed_import_writemap_import_form':
+    case 'feeds_feed_import_writemap_import_form':
 
-    $path = \Drupal::request()->getpathInfo();
-    $arg  = explode('/',$path);
+      $path = \Drupal::request()->getpathInfo();
+      $arg = explode('/', $path);
 
-    $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load($arg[2]);
-    $section = $feed->get('title')->getString();
+      $feed = \Drupal::entityTypeManager()
+        ->getStorage('feeds_feed')
+        ->load($arg[2]);
+      $section = $feed->get('title')->getString();
 
 
-    $section_machine = _machine_friendly($section);
+      $tempstore = \Drupal::service('user.private_tempstore')->get('my_module');
+      $tempstore->set($section, []);
+      break;
 
+    case 'feeds_feed_import_writemap_clear_form':
+      // Add the section variable so it gets passed to our custom submit handler.
+      $path = \Drupal::request()->getpathInfo();
+      $arg = explode('/', $path);
 
-    $tempstore = \Drupal::service('user.private_tempstore')->get('my_module');
-    $tempstore->set($section, array());
-    break;
+      $feed = \Drupal::entityTypeManager()
+        ->getStorage('feeds_feed')
+        ->load($arg[2]);
+      $section = $feed->get('title')->getString();
 
-  case 'feeds_feed_import_writemap_clear_form':
-    // Add the section variable so it gets passed to our custom submit handler.
-    $path = \Drupal::request()->getpathInfo();
-    $arg  = explode('/',$path);
+      //$section_machine = _machine_friendly($section);
 
-    $feed = \Drupal::entityTypeManager()->getStorage('feeds_feed')->load($arg[2]);
-    $section = $feed->get('title')->getString();
-
-    $section_machine = _machine_friendly($section);
-    
-    // Add a hidden field
-    // @see https://www.drupal.org/forum/support/module-development-and-code-questions/2015-12-19/drupal-8-submit-handler#comment-11902407
-    $form['section'] = array( 
-      '#type' => 'hidden', 
-      '#attributes' => array( 
-        'id' => 'section', 
-      ), 
-      '#default_value' => $section, 
-    );
-    // Add the submit handler so we delete our menus and terms.
-    $form['actions']['submit']['#submit'][] = 'my_module_delete_infrastructure';
-    break;
+      // Add a hidden field
+      // @see https://www.drupal.org/forum/support/module-development-and-code-questions/2015-12-19/drupal-8-submit-handler#comment-11902407
+      $form['section'] = [
+        '#type' => 'hidden',
+        '#attributes' => [
+          'id' => 'section',
+        ],
+        '#default_value' => $section,
+      ];
+      // Add the submit handler so we delete our menus and terms.
+      $form['actions']['submit']['#submit'][] = 'my_module_delete_infrastructure';
+      break;
   }
-} 
+}
 
 /**
  * Extra submit handler for feeds_feed_import_writemap_clear_form
  * Deletes the menu and term when the imported nodes are deleted.
  */
-function my_module_delete_infrastructure(array &$form, \Drupal\Core\Form\FormStateInterface $form_state){
+function my_module_delete_infrastructure(array &$form, \Drupal\Core\Form\FormStateInterface $form_state) {
   $section = $form_state->getValue('section');
 
 
-$section_machine = _machine_friendly($section);
+  //$section_machine = _machine_friendly($section);
 
 
   $menu = Menu::load($section);
-  if(!is_null($menu)){
+  if (!is_null($menu)) {
     $menu->delete();
   }
 
@@ -279,7 +274,7 @@ $section_machine = _machine_friendly($section);
         'name' => $section,
         'vid' => 'sections',
       ]);
-  foreach($terms as $term){
+  foreach ($terms as $term) {
     $term->delete();
   }
 }
@@ -289,9 +284,10 @@ $section_machine = _machine_friendly($section);
  *  Implements hook_theme.
  *  So far, this just tells Drupal to use the template defined in our module.
  *  Variables are sent to this template via template_theme()
- *  @see my_module_preprocess_block()
+ *
+ * @see my_module_preprocess_block()
  */
-function my_module_theme($existing, $type, $theme, $path){
+function my_module_theme($existing, $type, $theme, $path) {
   $return = [];
   $return['block__section_menu'] = [
     'template' => 'block--section-menu',
@@ -303,11 +299,12 @@ function my_module_theme($existing, $type, $theme, $path){
 /**
  *  Implements hook_preprocess_block().
  *  So far this is how we send variables to our template.
- *  @see my_module_theme()
+ *
+ * @see my_module_theme()
  */
-function my_module_preprocess_block(&$variables){
+function my_module_preprocess_block(&$variables) {
   $config = $variables['elements']['#configuration'];
-  if($config['id'] == 'section_menu' && $config['provider'] == 'my_module'){
+  if ($config['id'] == 'section_menu' && $config['provider'] == 'my_module') {
     // Get the actual menu name
     $menu_id = $variables['elements']['content']['#menu_name'];
     $menu = Menu::load($menu_id);
@@ -319,15 +316,13 @@ function my_module_preprocess_block(&$variables){
 /**
  * Convert a string into a machine-name-friendly version.
  */
-function _machine_friendly($string){
+function _machine_friendly($string) {
   $patterns[0] = '/[\s]/i';
   $replacements[0] = "-";
   $section = $string;
 
   $section_machine = preg_replace($patterns, $replacements, $section);
   $section_machine = strtolower($section_machine);
-  
-  dpm($section_machine, '$section_machine in  _machine_friendly()');
 
   return $section_machine;
 }

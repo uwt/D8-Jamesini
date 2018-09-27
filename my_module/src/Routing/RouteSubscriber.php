@@ -10,28 +10,26 @@ use Symfony\Component\Routing\RouteCollection;
  */
 class RouteSubscriber extends RouteSubscriberBase {
 
-	/**
-	 * {@inheritdoc}
-	 */
-	protected function alterRoutes(RouteCollection $collection) {
+  /**
+   * {@inheritdoc}
+   */
+  protected function alterRoutes(RouteCollection $collection) {
 
-    //$bobo = $collection->all();
-    //dpm($bobo, '$bobo');
 
-		// Change path '/user/login' to '/login'.
-		/*
-		if ($route = $collection->get('user.login')) {
-			$route->setPath('/login');
-		}
-		 */
+    // Change path '/user/login' to '/login'.
+    /*
+    if ($route = $collection->get('user.login')) {
+      $route->setPath('/login');
+    }
+     */
 
-		// Always deny access to '/user/logout'.
-		// Note that the second parameter of setRequirement() is a string.
-		/*
-		if ($route = $collection->get('user.logout')) {
-			$route->setRequirement('_access', 'FALSE');
-		}
-		 */
-	}
+    // Always deny access to '/user/logout'.
+    // Note that the second parameter of setRequirement() is a string.
+    /*
+    if ($route = $collection->get('user.logout')) {
+      $route->setRequirement('_access', 'FALSE');
+    }
+     */
+  }
 
 }
