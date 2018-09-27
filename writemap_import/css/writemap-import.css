@@ -1,0 +1,14 @@
+/** CSS File **/
+body h1{
+  clear: inherit;
+}
+img.align-left{
+  margin-right: 1em;
+}
+img.align-right{
+  margin-left: 1em;
+}
+a.is-active{
+  font-weight: bold;
+}
+

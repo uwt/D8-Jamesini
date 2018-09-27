@@ -1,0 +1,5 @@
+services:
+  writemap_import.route_subscriber:
+    class: Drupal\writemap_import\Routing\RouteSubscriber
+    tags:
+      - { name: event_subscriber }

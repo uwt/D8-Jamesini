@@ -1,0 +1,7 @@
+writemap_import.writemapimportcreatenode:
+  path: /writemapimportcreatenode
+  defaults:
+    _title: 'Writemap Import Create Node'
+    _controller: '\Drupal\writemap_import\Controller\WritemapImportCreateNodeController::content'
+  requirements:
+    _permission: 'TODO: set permission machine name'

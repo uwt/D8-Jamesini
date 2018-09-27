@@ -1,0 +1,3 @@
+writemap_import.writemapimportcreatenode:
+  title: 'Writemap Import Create Node'
+  route_name: writemap_import.writemapimportcreatenode
