@@ -8,6 +8,8 @@ use Drupal\menu_link_content\Entity\MenuLinkContent;
 
 /**
  * Adding a library (css+js) to all pages
+ *
+ * @param array $page An array to which you can add attachments.
  */
 function writemap_import_page_attachments(array &$page) {
   $page['#attached']['library'][] = 'writemap_import/james';
@@ -18,6 +20,12 @@ function writemap_import_page_attachments(array &$page) {
  *  When nodes are being created via the Writemap CSV export, we want to
  *  1) Assign a section
  *  2) Assign a menu item in the proper hierarchy.
+ *
+ * @param \Drupal\node\NodeInterface $node A node object that is being created.
+ *
+ * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+ * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+ * @throws \Drupal\Core\Entity\EntityStorageException
  */
 function writemap_import_node_insert(Drupal\node\NodeInterface $node) {
 
