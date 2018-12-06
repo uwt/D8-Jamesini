@@ -1,6 +1,9 @@
 name: 'Writemap Import'
 type: module
 description: 'Import nodes from a sitemap created at writemaps.com'
+package: UWT Custom
 dependencies:
+  - paragraphs
+  - feeds
   - node
 core: 8.x
