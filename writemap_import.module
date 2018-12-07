@@ -4,7 +4,7 @@ use Drupal\writemap_import\Controller\WritemapImportCreateNodeController;
 use Drupal\taxonomy\Entity\Term;
 use Drupal\system\Entity\Menu;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
-use Drupal\paragraphs\Entity\Paragraph;
+
 
 /**
  * Adding a library (css+js) to all pages
@@ -86,48 +86,17 @@ function writemap_import_node_insert(Drupal\node\NodeInterface $node) {
       ])->save();
     }
 
-
+    /////////////////////////////////////////////////////////////
     // Add Paragraphs to the node
+    ////////////////////////////////////////////////////////////
 
+    // Generate the paragraphs over in the Controller
+    $node_paragraphs = WritemapImportCreateNodeController::getDummyPageContent($node);
 
-    //$node_para = WritemapImportCreateNodeController::getDummyPageContent();
+    // Attach the paragraphs to the node
+    $node->set('field_page_component', $node_paragraphs);
 
-    // Begin proof-of-concept code
-
-    // Define list of paragraph types
-    $para_types = ['text'];
-    // Randomly select a paragraph type for this page
-    $para_type_chosen = array_rand($para_types);
-    $para_type = $para_types[$para_type_chosen];
-    // Create a new paragraph of the selected type
-    $node_para_text = WritemapImportCreateNodeController::getDummyText();
-    $node_para = Paragraph::create([
-      'type' => $para_type,
-      'field_text' => [
-        'value' => $node_para_text,
-        'format' => 'full_html',
-      ]
-    ]);
-    // Stuff some random content into the newly created paragraph
-    switch($para_type){
-      case "text":
-
-        break;
-    }
-
-    //
-    $node_para->isNew();
-    $node_para->save();
-
-    $current_paras = $node->get('field_page_component')->getValue();
-    $current_paras[] = [
-      'target_id' => $node_para->id(),
-      'target_revision_id' => $node_para->getRevisionId(),
-    ];
-
-    $node->set('field_page_component', $current_paras);
-    // End proof-of-concept code
-
+    // Save the node now that we've added some paragraphs.
     $node->save();
 
 
