@@ -51,12 +51,12 @@ class WritemapImportCreateNodeController {
     ];
 
     // Choose the image
-    $chosen_image_key = array_rand($images,1);
+    $chosen_image_key = array_rand($images, 1);
     $chosen_image = $images[$chosen_image_key];
     $image_destination = 'public://' . substr($chosen_image, -28);
     // Get the image from Flikr
     $data = file_get_contents($chosen_image);
-    $node_para_image = file_save_data($data, $image_destination,FILE_EXISTS_REPLACE);
+    $node_para_image = file_save_data($data, $image_destination, FILE_EXISTS_REPLACE);
     return $node_para_image;
   }
 
@@ -79,7 +79,6 @@ class WritemapImportCreateNodeController {
         $uri = 'https://loripsum.net/api/';
         $uri_params = '1/medium/plaintext';
         break;
-
     }
 
     $uri_full = $uri . $uri_params;
@@ -96,16 +95,12 @@ class WritemapImportCreateNodeController {
     } catch (GuzzleException $e) {
       return $e->getMessage();
     }
-
-
   }
 
   public static function getDummyPageContent($node) {
 
-    // Begin proof-of-concept code
-
     // Define list of paragraph types
-    $para_types = ['text', 'text_image'];
+    $para_types = ['text', 'text_image', 'image_text'];
     // Randomly select a paragraph type for this page
     $para_type_chosen = array_rand($para_types);
     $para_type = $para_types[$para_type_chosen];
@@ -125,6 +120,7 @@ class WritemapImportCreateNodeController {
         ]);
         break;
       case "text_image":
+      case "image_text":
         // Get some dummy text
         $node_para_text = WritemapImportCreateNodeController::getDummyText();
         // Get an image from UWT's Flickr
@@ -138,13 +134,13 @@ class WritemapImportCreateNodeController {
           ],
           'field_image' => [
             'target_id' => $node_para_image->id(),
-            'alt' => 'Arbitrary Alt Text...this is just dummy content after all.'
-          ]
+            'alt' => 'Arbitrary Alt Text...this is just dummy content after all.',
+          ],
         ]);
         break;
     }
 
-    //
+
     $node_para->isNew();
     $node_para->save();
     // We want to 'append' any newly generated paragraphs to the existing
@@ -155,7 +151,6 @@ class WritemapImportCreateNodeController {
       'target_revision_id' => $node_para->getRevisionId(),
     ];
     return $node_paragraphs;
-    // End proof-of-concept code
   }
 
 
