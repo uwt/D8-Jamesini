@@ -2,12 +2,6 @@
 
 namespace Drupal\writemap_import\Controller;
 
-//use Drupal\node\Entity\Node;
-//use Drupal\menu_link_content\Entity\MenuLinkContent;
-//use Drupal\system\Entity\Menu;
-//use Drupal\taxonomy\Entity;
-//use Drupal\taxonomy\Entity\Term;
-//use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 
 use Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException;
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
@@ -89,7 +83,6 @@ class WritemapImportCreateNodeController {
 
     return $content;
   }
-
 
   public static function getDummyText(string $type = 'html') {
     $content = "";

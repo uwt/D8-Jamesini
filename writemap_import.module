@@ -4,6 +4,7 @@ use Drupal\writemap_import\Controller\WritemapImportCreateNodeController;
 use Drupal\taxonomy\Entity\Term;
 use Drupal\system\Entity\Menu;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
+use Drupal\paragraphs\Entity\Paragraph;
 
 /**
  * Adding a library (css+js) to all pages
@@ -43,7 +44,7 @@ function writemap_import_node_insert(Drupal\node\NodeInterface $node) {
     $section = $feed->get('title')->getString();
 
     // Try to load the proper term
-    $new_term_vid = 'sections';
+    $new_term_vid = 'section';
     $query = \Drupal::entityQuery('taxonomy_term')
       ->condition('vid', $new_term_vid)
       ->condition('name', $section);
@@ -86,20 +87,47 @@ function writemap_import_node_insert(Drupal\node\NodeInterface $node) {
     }
 
 
-    // Add body content.  Body content is either
-    // 1) grabbed from the WriteMaps Page Content/Notes
-    // or
-    // 2) generated dummy content
+    // Add Paragraphs to the node
 
-    $bodyValue = $node->get('body')->getValue();
-    // Add content from WriteMaps
-    $node_body = $bodyValue[0]['value'];
-    if (strlen($node_body) <= 8) {
-      // Add the 'realistic' dummy page content.
-      $node_body = WritemapImportCreateNodeController::getDummyPageContent();
+
+    //$node_para = WritemapImportCreateNodeController::getDummyPageContent();
+
+    // Begin proof-of-concept code
+
+    // Define list of paragraph types
+    $para_types = ['text'];
+    // Randomly select a paragraph type for this page
+    $para_type_chosen = array_rand($para_types);
+    $para_type = $para_types[$para_type_chosen];
+    // Create a new paragraph of the selected type
+    $node_para_text = WritemapImportCreateNodeController::getDummyText();
+    $node_para = Paragraph::create([
+      'type' => $para_type,
+      'field_text' => [
+        'value' => $node_para_text,
+        'format' => 'full_html',
+      ]
+    ]);
+    // Stuff some random content into the newly created paragraph
+    switch($para_type){
+      case "text":
+
+        break;
     }
 
-    $node->body = ['format' => 'full_html', 'value' => $node_body];
+    //
+    $node_para->isNew();
+    $node_para->save();
+
+    $current_paras = $node->get('field_page_component')->getValue();
+    $current_paras[] = [
+      'target_id' => $node_para->id(),
+      'target_revision_id' => $node_para->getRevisionId(),
+    ];
+
+    $node->set('field_page_component', $current_paras);
+    // End proof-of-concept code
+
     $node->save();
 
 
@@ -117,7 +145,8 @@ function writemap_import_node_insert(Drupal\node\NodeInterface $node) {
     ////////////////////////////////////////////////////////////
 
     // Load an existing menu placeholder
-    $tempstore = \Drupal::service('user.private_tempstore')->get('writemap_import');
+    $tempstore = \Drupal::service('user.private_tempstore')
+      ->get('writemap_import');
 
     // $holder stores the hierarchy. At this point it does NOT contain the current node.
 
@@ -216,7 +245,8 @@ function writemap_import_form_alter(&$form, \Drupal\Core\Form\FormStateInterface
       $section = $feed->get('title')->getString();
 
 
-      $tempstore = \Drupal::service('user.private_tempstore')->get('writemap_import');
+      $tempstore = \Drupal::service('user.private_tempstore')
+        ->get('writemap_import');
       $tempstore->set($section, []);
       break;
 
