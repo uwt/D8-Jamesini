@@ -77,7 +77,7 @@ class WritemapImportCreateNodeController {
 
       case 'title':
         $uri = 'https://loripsum.net/api/';
-        $uri_params = '1/medium/plaintext';
+        $uri_params = '1/short/plaintext';
         break;
     }
 
@@ -134,7 +134,7 @@ class WritemapImportCreateNodeController {
           ],
           'field_image' => [
             'target_id' => $node_para_image->id(),
-            'alt' => 'Arbitrary Alt Text...this is just dummy content after all.',
+            'alt' => WritemapImportCreateNodeController::getDummyText('title'),
           ],
         ]);
         break;
